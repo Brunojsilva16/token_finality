@@ -1,0 +1,355 @@
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Meus Pacientes</h1>
+        <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes/novo" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Novo Paciente
+        </a>
+    </div>
+
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show">
+            <?= $_SESSION['success'];
+            unset($_SESSION['success']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show">
+            <?= $_SESSION['error'];
+            unset($_SESSION['error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Listagem de Pacientes</h6>
+            <span class="badge bg-primary text-white">Total: <?= $totalRegistros ?? 0 ?></span>
+        </div>
+        <div class="card-body">
+
+            <!-- Barra de Pesquisa -->
+            <form method="GET" action="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control bg-light border-0 small"
+                        placeholder="Pesquisar por nome ou CPF..."
+                        value="<?= htmlspecialchars($search ?? '') ?>" aria-label="Search">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search fa-sm"></i>
+                        </button>
+                        <?php if (!empty($search)): ?>
+                            <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes" class="btn btn-secondary ml-1" title="Limpar Filtro">
+                                <i class="fas fa-times fa-sm"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Telefone</th>
+                            <th>Cidade/UF</th>
+                            <th>Tags</th>
+                            <th class="text-center" style="width: 140px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($pacientes)): ?>
+                            <?php foreach ($pacientes as $p): ?>
+                                <?php
+                                // Preparar endereço completo para visualização
+                                $enderecoCompleto = trim(($p['logradouro'] ?? '') . ', ' . ($p['numero'] ?? '') . ' ' . ($p['complemento'] ?? '') . ' - ' . ($p['bairro'] ?? '') . ' - ' . ($p['cidade'] ?? '') . '/' . ($p['estado'] ?? ''));
+                                if ($enderecoCompleto == ',  -  - /') $enderecoCompleto = 'Não informado';
+
+                                // Formatar Data
+                                $nasc = !empty($p['data_nascimento']) ? date('d/m/Y', strtotime($p['data_nascimento'])) : '-';
+                                ?>
+                                <tr>
+                                    <td class="align-middle fw-bold text-dark"><?= htmlspecialchars($p['nome']) ?></td>
+                                    <td class="align-middle"><?= htmlspecialchars($p['cpf'] ?? '-') ?></td>
+                                    <td class="align-middle"><?= htmlspecialchars($p['telefone'] ?? '-') ?></td>
+                                    <td class="align-middle">
+                                        <?php if (!empty($p['cidade'])): ?>
+                                            <?= htmlspecialchars($p['cidade']) ?>/<?= htmlspecialchars($p['estado']) ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="align-middle">
+                                        <?php if (!empty($p['tags'])): ?>
+                                            <span class="badge bg-info text-white shadow-sm"><?= htmlspecialchars($p['tags']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <div class="btn-group" role="group">
+                                            <!-- Botão Visualizar -->
+                                            <button type="button" class="btn btn-info btn-sm btn-circle btn-visualizar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalVisualizarPaciente"
+                                                data-nome="<?= htmlspecialchars($p['nome']) ?>"
+                                                data-email="<?= htmlspecialchars($p['email'] ?? '-') ?>"
+                                                data-cpf="<?= htmlspecialchars($p['cpf'] ?? '-') ?>"
+                                                data-telefone="<?= htmlspecialchars($p['telefone'] ?? '-') ?>"
+                                                data-nascimento="<?= $nasc ?>"
+                                                data-genero="<?= htmlspecialchars($p['genero'] ?? '-') ?>"
+                                                data-responsavel="<?= htmlspecialchars($p['nome_responsavel'] ?? '-') ?>"
+                                                data-resp-fin="<?= htmlspecialchars($p['responsavel_financeiro'] ?? '-') ?>"
+                                                data-cep="<?= htmlspecialchars($p['cep'] ?? '-') ?>"
+                                                data-endereco="<?= htmlspecialchars($enderecoCompleto) ?>"
+                                                data-tags="<?= htmlspecialchars($p['tags'] ?? '-') ?>"
+                                                data-obs="<?= htmlspecialchars($p['observacoes'] ?? 'Nenhuma observação.') ?>"
+                                                title="Visualizar Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+
+                                            <button type="button" class="btn">
+                                                <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes/editar?id=<?= $p['id_paciente'] ?>" class="btn btn-warning btn-sm btn-circle" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </button>
+
+                                            <button type="button" class="btn">
+                                                <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes/excluir?id=<?= $p['id_paciente'] ?>" class="btn btn-danger btn-sm btn-circle"
+                                                    onclick="return confirm('Tem certeza que deseja excluir o paciente <?= addslashes($p['nome']) ?>?');" title="Excluir">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </button>
+                                        </div>
+
+
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="text-gray-500 mb-2"><i class="fas fa-search fa-3x"></i></div>
+                                    <p class="text-gray-500 mb-0">Nenhum paciente encontrado.</p>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes" class="btn btn-sm btn-secondary mt-3">Limpar Pesquisa</a>
+                                    <?php else: ?>
+                                        <a href="<?= defined('URL_BASE') ? URL_BASE : '' ?>/pacientes/novo" class="btn btn-sm btn-primary mt-3">Cadastrar Primeiro Paciente</a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginação Inteligente -->
+            <?php if (isset($totalPaginas) && $totalPaginas > 1): ?>
+                <?php
+                // Função auxiliar para manter o parâmetro de busca nos links
+                $buildUrl = function ($pageNum) use ($search) {
+                    $params = ['page' => $pageNum];
+                    if (!empty($search)) {
+                        $params['search'] = $search;
+                    }
+                    return '?' . http_build_query($params);
+                };
+                ?>
+                <div class="d-flex justify-content-center mt-4">
+                    <nav aria-label="Navegação de página">
+                        <ul class="pagination shadow-sm">
+                            <!-- Botão Anterior -->
+                            <li class="page-item <?= ($paginaAtual <= 1) ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $buildUrl(max(1, $paginaAtual - 1)) ?>" aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+
+                            <?php
+                            $range = 2;
+                            $showFirst = ($paginaAtual > ($range + 1));
+                            $showLast  = ($paginaAtual < ($totalPaginas - $range));
+                            ?>
+
+                            <!-- Primeira Página -->
+                            <?php if ($showFirst): ?>
+                                <li class="page-item"><a class="page-link" href="<?= $buildUrl(1) ?>">1</a></li>
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            <?php endif; ?>
+
+                            <!-- Loop Central -->
+                            <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
+                                <?php if ($i >= ($paginaAtual - $range) && $i <= ($paginaAtual + $range)): ?>
+                                    <li class="page-item <?= ($paginaAtual == $i) ? 'active' : '' ?>">
+                                        <a class="page-link" href="<?= $buildUrl($i) ?>"><?= $i ?></a>
+                                    </li>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+
+                            <!-- Última Página -->
+                            <?php if ($showLast): ?>
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                <li class="page-item"><a class="page-link" href="<?= $buildUrl($totalPaginas) ?>"><?= $totalPaginas ?></a></li>
+                            <?php endif; ?>
+
+                            <!-- Botão Próximo -->
+                            <li class="page-item <?= ($paginaAtual >= $totalPaginas) ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $buildUrl(min($totalPaginas, $paginaAtual + 1)) ?>" aria-label="Próximo">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="text-center text-xs text-gray-500 mt-1">
+                    Página <?= $paginaAtual ?> de <?= $totalPaginas ?>
+                </div>
+            <?php endif; ?>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Visualizar Paciente -->
+<div class="modal fade" id="modalVisualizarPaciente" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white bg-gradient-secundary">
+                <h5 class="modal-title fw-bold" id="modalLabel">
+                    <i class="fas fa-id-card me-2"></i> Detalhes do Paciente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-12 text-center pb-3 border-bottom">
+                                <h3 class="fw-bold text-gray-800" id="viewNome">Nome do Paciente</h3>
+                                <span class="badge bg-info text-white" id="viewTags">Tags</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- Coluna 1 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary fw-bold"><i class="fas fa-user me-1"></i> Dados Pessoais</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">CPF:</span> <span id="viewCpf">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">Nascimento:</span> <span id="viewNasc">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">Gênero:</span> <span id="viewGenero">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">Responsável Legal:</span> <span id="viewResponsavel">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold text-success">Resp. Financeiro:</span> <span id="viewRespFin">-</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Coluna 2 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary fw-bold"><i class="fas fa-address-book me-1"></i> Contato e Endereço</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">Email:</span> <span id="viewEmail">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span class="fw-bold">Telefone:</span> <span id="viewTelefone">-</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent">
+                                        <div class="fw-bold mb-1">Endereço:</div>
+                                        <div class="small text-muted" id="viewEndereco">-</div>
+                                        <div class="small text-muted mt-1">CEP: <span id="viewCep">-</span></div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-primary fw-bold"><i class="fas fa-sticky-note me-1"></i> Observações</h6>
+                                <div class="p-3 bg-white border rounded text-secondary" id="viewObs">
+                                    Nenhuma observação registrada.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configura o DataTables (apenas visual) e os eventos do Modal
+    window.addEventListener('load', function() {
+
+        // Inicializa DataTable se existir jQuery e o plugin
+        if (typeof $ !== 'undefined' && $.fn.DataTable) {
+            $('#dataTable').DataTable({
+                "paging": false,
+                "info": false,
+                "searching": false,
+                "ordering": true,
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Portuguese-Brasil.json"
+                }
+            });
+        }
+
+        // Lógica para preencher o Modal
+        const modalEl = document.getElementById('modalVisualizarPaciente');
+        if (modalEl) {
+            modalEl.addEventListener('show.bs.modal', function(event) {
+                // Botão que acionou o modal
+                const button = event.relatedTarget;
+
+                // Extrai info dos atributos data-*
+                const nome = button.getAttribute('data-nome');
+                const cpf = button.getAttribute('data-cpf');
+                const email = button.getAttribute('data-email');
+                const telefone = button.getAttribute('data-telefone');
+                const nasc = button.getAttribute('data-nascimento');
+                const genero = button.getAttribute('data-genero');
+                const responsavel = button.getAttribute('data-responsavel');
+                const respFin = button.getAttribute('data-resp-fin');
+                const cep = button.getAttribute('data-cep');
+                const endereco = button.getAttribute('data-endereco');
+                const tags = button.getAttribute('data-tags');
+                const obs = button.getAttribute('data-obs');
+
+                // Atualiza o conteúdo do modal
+                modalEl.querySelector('#viewNome').textContent = nome;
+                modalEl.querySelector('#viewCpf').textContent = cpf;
+                modalEl.querySelector('#viewEmail').textContent = email;
+                modalEl.querySelector('#viewTelefone').textContent = telefone;
+                modalEl.querySelector('#viewNasc').textContent = nasc;
+                modalEl.querySelector('#viewGenero').textContent = genero;
+                modalEl.querySelector('#viewResponsavel').textContent = responsavel;
+                modalEl.querySelector('#viewRespFin').textContent = respFin;
+                modalEl.querySelector('#viewCep').textContent = cep;
+                modalEl.querySelector('#viewEndereco').textContent = endereco;
+                modalEl.querySelector('#viewObs').textContent = obs;
+
+                const tagEl = modalEl.querySelector('#viewTag');
+                tagEl.textContent = tags || 'Sem Tags';
+                if (!tags || tags === '-') {
+                    tagEl.classList.add('d-none');
+                } else {
+                    tagEl.classList.remove('d-none');
+                }
+            });
+        }
+    });
+</script>
